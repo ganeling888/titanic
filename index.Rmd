@@ -209,7 +209,7 @@ step(object=glm(Survived ~ Pclass+Age+Sex+SibSp+Parch+Fare+Embarked,
                 direction = "backward")
 ```
 
-because there are so many extreme data in Fare, we can use log to normalize the data
+because there is so many extreme data in Fare, we can use log to normalize the data
 
 ```{r}
 trainSet$logFare<-log(trainSet$Fare)
@@ -249,6 +249,7 @@ model <- train(Survived ~ Pclass + totalAge + Sex + SibSp + Embarked,
                                 # Use 10 folds for cross-validation
 )
 model
+# the accuracy rate is 0.8215438
 ```
 
 now we can draw the graph
@@ -280,3 +281,130 @@ ggplot(featureImportance, aes(x=reorder(Feature, Importance), y=Importance)) +
     theme(plot.title=element_text(size=18))
 ```
 
+### *The accuracy using random forest is `0.8215438`*
+
+establish the output for testset
+
+```{r}
+testSet$Pclass <- factor(testSet$Pclass)
+testSet$totalAge <- ifelse(is.na(testSet$Age), 
+                       mean(testSet$Age, na.rm = TRUE), 
+                       testSet$Age)
+testSet$Survived <- predict(model, newdata = testSet)
+submission <- testSet[,c("PassengerId", "Survived")]
+write.table(submission, file = "submission.csv", 
+            col.names = TRUE, row.names = FALSE, sep = ",")
+```
+
+### Now we can change the algorithms and the combination of variables to get some new results:
+
+```{r}
+# first of all, because we need to use this process several
+# times, we will build a function to save the repetitive work
+train_the_data <- function(method_use, isUsingEmbarked) {
+    # set the seed first so you can get the same result as me
+    set.seed(as.numeric(as.Date("2017-05-15")))
+    # method_use argument means using method in train function
+    # if isUsingEmbarked argument is TRUE, the variables will be 
+    # Pclass + totalAge + Sex + SibSp + Embarked, otherwise will 
+    # be Pclass + totalAge + Sex + SibSp
+    if (isUsingEmbarked == TRUE) {
+        model <- train(Survived ~ Pclass + totalAge + Sex + SibSp + Embarked, 
+                       data = trainSet, 
+                       # Use the trainSet dataframe as the training data
+                       method = method_use,
+                       # Use the algorithm we defined
+                       trControl = trainControl(method = "cv", 
+                                                # Use cross-validation
+                                                number = 10) 
+                       # Use 10 folds for cross-validation
+        )    
+    }
+    else {
+        model <- train(Survived ~ Pclass + totalAge + Sex + SibSp, 
+                       data = trainSet, 
+                       # Use the trainSet dataframe as the training data
+                       method = method_use,
+                       # Use the algorithm we defined
+                       trControl = trainControl(method = "cv", 
+                                                # Use cross-validation
+                                                number = 10) 
+                       # Use 10 folds for cross-validation
+        ) 
+    }
+    return(model)    
+}
+```
+
+### Neural Network
+
+```{r}
+# test with Embarked
+model <- train_the_data("nnet", TRUE)
+model
+# the accuracy rate is 0.8170877
+# test with no Embarked
+model <- train_the_data("nnet", FALSE)
+model
+# the accuracy rate is 0.8147514
+```
+
+### SVM
+
+```{r}
+# test with Embarked
+model <- train_the_data("svmLinearWeights2", TRUE)
+model
+# the accuracy is 0.7911931
+# test with no Embarked
+model <- train_the_data("svmLinearWeights2", FALSE)
+model
+# the accuracy is 0.7923417
+```
+
+### Desicion Tree
+
+```{r}
+# test with Embarked
+model <- train_the_data("rpart", TRUE)
+model
+# the accuracy is 0.8114184
+# test with no Embarked
+model <- train_the_data("rpart", FALSE)
+model
+# the accuracy is 0.7990333
+```
+
+### knn
+
+```{r}
+# test with Embarked
+model <- train_the_data("knn", TRUE)
+model
+# the accuracy is 0.7486715
+# test with no Embarked
+model <- train_the_data("knn", FALSE)
+model
+# the accuracy is 0.7621555
+```
+
+### Naive Bayes
+
+```{r}
+# test with Embarked
+model <- train_the_data("nb", TRUE)
+model
+# the accuracy is 0.7631151
+# test with no Embarked
+model <- train_the_data("nb", FALSE)
+model
+# the accuracy is 0.7889576
+```
+
+============================
+
+##                            Conclusion
+
+*the accuracy rate `0.8215438` is the best rate, using random forest with cv algorithm to do the prediction*
+
+============================
