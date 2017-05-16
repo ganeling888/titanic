@@ -1,0 +1,282 @@
+---
+title: "Titanic"
+author: "GAN LING"
+date: "2017/5/15"
+output: html_document
+---
+
+install the neccessary package
+
+```{r}
+# install.packages("caret")
+# install.packages("randomForest")
+# install.packages("e1071")
+# install.packages("psych")
+# install.packages("lattice")
+# install.packages("lsr")
+# install.packages("rpart")
+# install.packages("ada")
+# install.packages("plyr")
+# install.packages("kernlab")
+# install.packages("LiblineaR")
+# install.packages("klaR")
+```
+
+load all the neccessary package
+
+```{r}
+library(ggplot2)
+library(psych)
+library(lsr)
+library(caret)
+library(randomForest)
+library(lattice)
+library(e1071)
+library(rpart)
+library(ada)
+library(plyr)
+library(kernlab)
+library(LiblineaR)
+library(klaR)
+library(MASS)
+```
+
+read the data
+
+```{r}
+trainSet <- read.csv("train.csv")
+testSet <- read.csv("test.csv")
+# convert some of them to factor
+trainSet$Survived <- factor(trainSet$Survived)
+trainSet$Pclass <- factor(trainSet$Pclass)
+```
+
+clean the data
+
+```{r}
+summary(trainSet)
+# From our result only Age has NA values. We get that Age has 177 
+# NA values, Cabin has 687 blank values, and Embarked has 2 blank values. 
+# We do not use Cabin, so we do not deal with it. The 2 blank 
+# values maybe affect our result. And most of Embarked are S 
+# so we define two blank values to S
+trainSet$Embarked[trainSet$Embarked==""] = "S"
+```
+
+see all of the variables we use in ggplot2
+
+```{r}
+# Pclass command
+ggplot(trainSet, aes(x=Pclass,fill=Pclass)) +
+    geom_bar() +
+    xlab("Pclass") +
+    ylab("Number of Each Class") +
+    ggtitle("Pclass") +
+    theme_bw()
+# Sex command
+ggplot(data=trainSet, aes(x=Sex, fill=Sex)) +
+    geom_bar() +
+    ggtitle("Sex") +
+    labs(y="Number of Sex", x="Sex") +
+    theme_bw()
+# Age command
+ggplot(trainSet, aes(x="", y=Age)) +
+    stat_boxplot(geom ='errorbar')+
+    geom_boxplot(fill="lightblue") +
+    xlab("") +
+    guides(fill=FALSE) +
+    ggtitle("Age") +
+    coord_flip() +
+    theme_bw()
+# SibSp command
+ggplot(trainSet, aes(x=SibSp)) +
+    geom_histogram() +
+    geom_histogram(fill="lightblue") +
+    xlab("SibSp") +
+    ylab("Number") +
+    guides(fill=FALSE) +
+    ggtitle("SibSp") +
+    theme_bw()
+# Parch command
+ggplot(trainSet, aes(x=Parch)) +
+    geom_histogram() +
+    geom_histogram(fill="lightblue") +
+    xlab("Parch") +
+    ylab("Number") +
+    guides(fill=FALSE) +
+    ggtitle("Parch") +
+    theme_bw()
+# Fare command
+ggplot(trainSet, aes(x="", y=Fare)) +
+    stat_boxplot(geom ='errorbar')+
+    geom_boxplot(fill="lightblue") +
+    xlab("") +
+    guides(fill=FALSE) +
+    ggtitle("Fare") +
+    coord_flip() +
+    theme_bw()
+# Embarked command
+ggplot(trainSet, aes(x=Embarked,fill=Embarked)) +
+    geom_bar() +
+    xlab("Embarked") +
+    ylab("Number of Each Class") +
+    ggtitle("Embarked") +
+    theme_bw()
+```
+
+get some statistical test to see the correlation between single variable and output
+
+```{r}
+# Pclass
+associationTest(~ Survived + Pclass, data = trainSet)
+# Sex
+associationTest(~ Survived + Sex, data = trainSet)
+# Age
+independentSamplesTTest(Age ~ Survived, data = trainSet)
+# SibSp
+independentSamplesTTest(SibSp ~ Survived, data = trainSet)
+# Parch
+independentSamplesTTest(Parch ~ Survived, data = trainSet)
+# Fare
+independentSamplesTTest(Fare ~ Survived, data = trainSet)
+# Embarked
+associationTest(~ Survived + Embarked, data = trainSet)
+
+
+#draw them
+# Pclass command
+mosaicplot(table(trainSet$Pclass,trainSet$Survived),
+           ylab="Survived",xlab="Pclass",
+           color=c("lightblue","lightcoral"), 
+           main="Survived by Pclass")
+# Sex command
+mosaicplot(table(trainSet$Sex,trainSet$Survived),
+           ylab="Survived",xlab="Sex",
+           color=c("lightblue","lightcoral"), 
+           main="Survived by Sex")
+# Age command
+ggplot(trainSet, aes(x=Survived, y=Age, fill=Survived)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot() +
+    guides(fill=FALSE) +
+    coord_flip() +
+    ggtitle("Survived by Age") +
+    theme_bw()
+# SibSp command
+ggplot(trainSet, aes(x=Survived, y=SibSp, fill=Survived)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot() +
+    guides(fill=FALSE) +
+    coord_flip() +
+    ggtitle("Survived by SibSp") +
+    theme_bw()
+# Parch command
+ggplot(trainSet, aes(x=Survived, y=Parch, fill=Survived)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot() +
+    guides(fill=FALSE) +
+    coord_flip() +
+    ggtitle("Survived by Parch") +
+    theme_bw()
+# Fare command
+ggplot(trainSet, aes(x=Survived, y=Fare, fill=Survived)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot() +
+    guides(fill=FALSE) +
+    coord_flip() +
+    ggtitle("Survived by Fare") +
+    theme_bw()
+# Embarked command
+mosaicplot(table(trainSet$Embarked,trainSet$Survived),
+           ylab="Survived",xlab="Embarked",
+           color=c("lightblue","lightcoral"), 
+           main="Survived by Embarked")
+```
+
+use glm model to do the train
+
+```{r}
+summary(glm(Survived ~ Pclass+Age+Sex+SibSp+Parch+Fare+Embarked, 
+            data = trainSet, family = "binomial"))
+
+```
+
+do a backward step test for the training set using glm
+
+```{r}
+step(object=glm(Survived ~ Pclass+Age+Sex+SibSp+Parch+Fare+Embarked, 
+                data = trainSet, family = "binomial"), 
+                direction = "backward")
+```
+
+because there are so many extreme data in Fare, we can use log to normalize the data
+
+```{r}
+trainSet$logFare<-log(trainSet$Fare)
+```
+
+use new data to do the training
+
+we dealed with Fare using log, and there are some Fare values equal to 0, log(0) is -Inf, we need to ignore all the -Inf before training
+
+```{r}
+step(object=glm(Survived ~ Pclass+Age+Sex+SibSp+Parch+logFare+Embarked, 
+                data = trainSet[!is.infinite(trainSet$logFare),], 
+                family = "binomial"), direction = "backward")
+```
+
+about the age, we use a random number between maximum and minimum as NA's age.
+
+```{r}
+set.seed(as.numeric(as.Date("2017-05-15")))
+trainSet$totalAge <- ifelse(is.na(trainSet$Age), 
+                            as.integer(runif(177,min=0.42,max=80)), 
+                            trainSet$Age)					
+```
+
+train the data using Random Forest model
+
+```{r}
+set.seed(as.numeric(as.Date("2017-05-15")))
+model <- train(Survived ~ Pclass + totalAge + Sex + SibSp + Embarked, 
+               data = trainSet, 
+               # Use the trainSet dataframe as the training data
+               method = "rf",
+               # Use the "random forest" algorithm
+               trControl = trainControl(method = "cv", 
+                                        # Use cross-validation
+                                        number = 10) 
+                                # Use 10 folds for cross-validation
+)
+model
+```
+
+now we can draw the graph
+
+```{r}
+extractFeatures <- function(data) {
+    features <- c("Pclass",
+                  "totalAge",
+                  "Sex",
+                  "SibSp",
+                  "Embarked")
+    fea <- data[,features]
+    # fea$Embarked[fea$Embarked==""] = "S"
+    fea$Sex      <- as.factor(fea$Sex)
+    fea$Embarked <- as.factor(fea$Embarked)
+    return(fea)
+}
+rf <- randomForest(extractFeatures(trainSet), as.factor(trainSet$Survived), ntree=100, importance=TRUE)
+imp <- importance(rf, type=1)
+featureImportance <- data.frame(Feature=row.names(imp), Importance=imp[,1])
+
+ggplot(featureImportance, aes(x=reorder(Feature, Importance), y=Importance)) +
+    geom_bar(stat="identity", fill="#53cfff") +
+    coord_flip() + 
+    theme_light(base_size=20) +
+    xlab("") +
+    ylab("Importance") + 
+    ggtitle("Random Forest Feature Importance\n") +
+    theme(plot.title=element_text(size=18))
+```
+
